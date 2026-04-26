@@ -84,6 +84,22 @@
             B 취득일자
             <select id="toeicDateColumnB"></select>
           </label>
+          <label>
+            <span>모의토익 A <span class="col-badge recent-badge">최근 2년</span></span>
+            <select id="mockToeicColumnA"></select>
+          </label>
+          <label>
+            모의 A 취득일자
+            <select id="mockToeicDateColumnA"></select>
+          </label>
+          <label>
+            <span>모의토익 B <span class="col-badge all-badge">전체 기간</span></span>
+            <select id="mockToeicColumnB"></select>
+          </label>
+          <label>
+            모의 B 취득일자
+            <select id="mockToeicDateColumnB"></select>
+          </label>
           <button id="applyMapping" type="button" class="mapping-submit">분석 시작</button>
         </div>
       </section>
@@ -149,6 +165,15 @@
           </div>
 
           <div class="threshold-row">
+            <label for="mockToeicThreshold">모의토익 기준</label>
+            <div class="number-line">
+              <input id="mockToeicThreshold" type="range" min="0" max="990" step="1" value="700" />
+              <input id="mockToeicThresholdNumber" type="number" min="0" max="990" step="1" value="700" />
+            </div>
+            <p id="mockToeicHelp" class="microcopy">모의토익 자료가 있을 때 동시 충족 기준에 반영</p>
+          </div>
+
+          <div class="threshold-row">
             <span class="filter-label">충족률 적용</span>
             <div class="segmented" role="radiogroup" aria-label="충족률 적용 방식">
               <label>
@@ -198,14 +223,14 @@
                 </div>
               </article>
               <article class="metric-card">
-                <span>토익 충족률</span>
+                <span>토익/모의토익 충족률</span>
                 <div class="metric-value-row">
                   <strong id="toeicPass">0</strong>
                   <small id="toeicPassRate">0%</small>
                 </div>
               </article>
               <article class="metric-card accent">
-                <span>두 기준 동시 충족률</span>
+                <span>평점·어학 동시 충족률</span>
                 <div class="metric-value-row">
                   <strong id="bothPass">0</strong>
                   <small id="bothPassRate">0%</small>

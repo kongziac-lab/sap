@@ -10,6 +10,8 @@ const state = {
     maxGpa: 4.5,
     minToeic: 0,
     maxToeic: 990,
+    minMockToeic: 0,
+    maxMockToeic: 990,
   },
   studentIdColumn: "",
   departmentColumn: "",
@@ -20,6 +22,10 @@ const state = {
   toeicDateColumnA: "",
   toeicColumnB: "",
   toeicDateColumnB: "",
+  mockToeicColumnA: "",
+  mockToeicDateColumnA: "",
+  mockToeicColumnB: "",
+  mockToeicDateColumnB: "",
 };
 
 const els = {
@@ -36,6 +42,10 @@ const els = {
   toeicDateColumnA: document.querySelector("#toeicDateColumnA"),
   toeicColumnB: document.querySelector("#toeicColumnB"),
   toeicDateColumnB: document.querySelector("#toeicDateColumnB"),
+  mockToeicColumnA: document.querySelector("#mockToeicColumnA"),
+  mockToeicDateColumnA: document.querySelector("#mockToeicDateColumnA"),
+  mockToeicColumnB: document.querySelector("#mockToeicColumnB"),
+  mockToeicDateColumnB: document.querySelector("#mockToeicDateColumnB"),
   applyMapping: document.querySelector("#applyMapping"),
   dashboard: document.querySelector("#dashboard"),
   dataSummary: document.querySelector("#dataSummary"),
@@ -47,6 +57,9 @@ const els = {
   gpaThresholdNumber: document.querySelector("#gpaThresholdNumber"),
   toeicThreshold: document.querySelector("#toeicThreshold"),
   toeicThresholdNumber: document.querySelector("#toeicThresholdNumber"),
+  mockToeicThreshold: document.querySelector("#mockToeicThreshold"),
+  mockToeicThresholdNumber: document.querySelector("#mockToeicThresholdNumber"),
+  mockToeicHelp: document.querySelector("#mockToeicHelp"),
   targetRate: document.querySelector("#targetRate"),
   targetRateNumber: document.querySelector("#targetRateNumber"),
   targetModeHelp: document.querySelector("#targetModeHelp"),
@@ -110,6 +123,9 @@ const toeicBins = [
   [950, 990],
 ];
 
+els.fileInput.addEventListener("click", () => {
+  els.fileInput.value = "";
+});
 els.fileInput.addEventListener("change", handleFile);
 els.applyMapping.addEventListener("click", applyMapping);
 els.recommendButton.addEventListener("click", applyCurrentTarget);
@@ -122,12 +138,15 @@ document.querySelectorAll('input[name="targetMode"]').forEach((input) => input.a
 
 syncCriterionPair(els.gpaThreshold, els.gpaThresholdNumber, "gpa");
 syncCriterionPair(els.toeicThreshold, els.toeicThresholdNumber, "toeic");
+syncCriterionPair(els.mockToeicThreshold, els.mockToeicThresholdNumber, "mockToeic");
 syncPair(els.targetRate, els.targetRateNumber, scheduleTargetAutoApply);
 
 loadDefaultDataset();
 
 els.toeicThreshold.step = 1;
 els.toeicThresholdNumber.step = 1;
+els.mockToeicThreshold.step = 1;
+els.mockToeicThresholdNumber.step = 1;
 
 function syncPair(range, number, afterChange) {
   range.addEventListener("input", () => {
@@ -160,6 +179,10 @@ function scheduleTargetAutoApply() {
 
 function handleCriterionChange(changedCriterion) {
   if (isAutoTargetMode()) {
+    if (changedCriterion === "mockToeic") {
+      applyTargetRateThresholds(true);
+      return;
+    }
     adjustComplementaryThreshold(changedCriterion);
     return;
   }
@@ -199,6 +222,9 @@ async function handleFile(event) {
   }
 
   state.fileName = file.name;
+  els.dashboard.classList.add("hidden");
+  els.mappingPanel.classList.remove("hidden");
+  els.mappingHelp.textContent = `${file.name} 파일을 읽는 중입니다.`;
   const rows = await readSpreadsheetRows(file);
 
   if (!rows.length) {
@@ -245,6 +271,10 @@ function loadRowsForMapping(rows, displayName, { autoAnalyze = false } = {}) {
   state.toeicDateColumnA = findLikelyColumn(state.headers, ["a취득일", "취득일a", "a_취득", "최근취득", "atoeicdate"], true);
   state.toeicColumnB = findLikelyColumn(state.headers, ["토익b", "toeicb", "토익_b", "b토익", "전체토익", "toeic_b", "전기간"], true);
   state.toeicDateColumnB = findLikelyColumn(state.headers, ["b취득일", "취득일b", "b_취득", "전체취득", "btoeicdate"], true);
+  state.mockToeicColumnA = findLikelyColumn(state.headers, ["모의토익a", "모의toeica", "모의토익_a", "mocktoeica", "mock_toeic_a", "mocktoeic_a"], true);
+  state.mockToeicDateColumnA = findLikelyColumn(state.headers, ["모의a취득일", "모의a취득일자", "모의취득일a", "mocktoeicadate", "mock_toeic_a_date"], true);
+  state.mockToeicColumnB = findLikelyColumn(state.headers, ["모의토익b", "모의toeicb", "모의토익_b", "mocktoeicb", "mock_toeic_b", "mocktoeic_b"], true);
+  state.mockToeicDateColumnB = findLikelyColumn(state.headers, ["모의b취득일", "모의b취득일자", "모의취득일b", "mocktoeicbdate", "mock_toeic_b_date"], true);
 
   // B열이 없으면 일반 토익 열을 B로 fallback
   if (!state.toeicColumnB) {
@@ -260,8 +290,17 @@ function loadRowsForMapping(rows, displayName, { autoAnalyze = false } = {}) {
   fillSelect(els.toeicDateColumnA, state.headers, state.toeicDateColumnA, true);
   fillSelect(els.toeicColumnB, state.headers, state.toeicColumnB, true);
   fillSelect(els.toeicDateColumnB, state.headers, state.toeicDateColumnB, true);
+  fillSelect(els.mockToeicColumnA, state.headers, state.mockToeicColumnA, true);
+  fillSelect(els.mockToeicDateColumnA, state.headers, state.mockToeicDateColumnA, true);
+  fillSelect(els.mockToeicColumnB, state.headers, state.mockToeicColumnB, true);
+  fillSelect(els.mockToeicDateColumnB, state.headers, state.mockToeicDateColumnB, true);
   els.mappingHelp.textContent = `${displayName} 분석 파일에서 ${numberFormat.format(rows.length)}개 행을 읽었습니다. 자동 매핑이 다르면 열을 바꿔 주세요.`;
   els.mappingPanel.classList.remove("hidden");
+  if (!autoAnalyze) {
+    els.uploadPanel.classList.add("hidden");
+    els.dashboard.classList.add("hidden");
+    els.mappingPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   if (autoAnalyze) applyMapping();
 }
@@ -332,6 +371,10 @@ function applyMapping() {
   state.toeicDateColumnA = els.toeicDateColumnA.value;
   state.toeicColumnB = els.toeicColumnB.value;
   state.toeicDateColumnB = els.toeicDateColumnB.value;
+  state.mockToeicColumnA = els.mockToeicColumnA.value;
+  state.mockToeicDateColumnA = els.mockToeicDateColumnA.value;
+  state.mockToeicColumnB = els.mockToeicColumnB.value;
+  state.mockToeicDateColumnB = els.mockToeicDateColumnB.value;
   state.parsedRows = state.rawRows
     .map((row, index) => ({
       index: index + 1,
@@ -345,6 +388,10 @@ function applyMapping() {
       toeicDateA: parseDateValue(row[state.toeicDateColumnA]),
       toeicB: state.toeicColumnB ? toNumber(row[state.toeicColumnB]) : Number.NaN,
       toeicDateB: parseDateValue(row[state.toeicDateColumnB]),
+      mockToeicA: state.mockToeicColumnA ? toNumber(row[state.mockToeicColumnA]) : Number.NaN,
+      mockToeicDateA: parseDateValue(row[state.mockToeicDateColumnA]),
+      mockToeicB: state.mockToeicColumnB ? toNumber(row[state.mockToeicColumnB]) : Number.NaN,
+      mockToeicDateB: parseDateValue(row[state.mockToeicDateColumnB]),
     }))
     .filter((row) => Number.isFinite(row.gpa)); // 토익 없는 학생도 분석 모집단에 포함
 
@@ -368,6 +415,8 @@ function applyMapping() {
   els.gpaThresholdNumber.value = state.scoreBounds.minGpa.toFixed(2);
   els.toeicThreshold.value = state.scoreBounds.minToeic;
   els.toeicThresholdNumber.value = state.scoreBounds.minToeic;
+  els.mockToeicThreshold.value = state.scoreBounds.minMockToeic;
+  els.mockToeicThresholdNumber.value = state.scoreBounds.minMockToeic;
 
   els.uploadPanel.classList.add("hidden");
   els.mappingPanel.classList.add("hidden");
@@ -415,23 +464,25 @@ function populateFilters() {
 
   const hasA = state.parsedRows.some((row) => Number.isFinite(row.toeicA));
   const hasB = state.parsedRows.some((row) => Number.isFinite(row.toeicB));
+  const hasMockA = state.parsedRows.some((row) => Number.isFinite(row.mockToeicA));
+  const hasMockB = state.parsedRows.some((row) => Number.isFinite(row.mockToeicB));
 
   document.querySelectorAll('input[name="toeicPeriod"]').forEach((input) => {
     if (input.value === "recent") {
-      input.disabled = !hasA;
-      if (!hasA && input.checked) {
+      input.disabled = !(hasA || hasMockA);
+      if (!(hasA || hasMockA) && input.checked) {
         document.querySelector('input[name="toeicPeriod"][value="all"]').checked = true;
       }
     }
     if (input.value === "all") {
-      input.disabled = !hasB;
+      input.disabled = !(hasB || hasMockB);
     }
   });
 
   els.periodHelp.textContent =
-    hasA && hasB ? "A열: 최근 2년 최고점 · B열: 전체 기간 최고점"
-    : !hasA       ? "최근 2년 성적(A열) 없음 — 전체 기간만 분석"
-    :               "전체 기간 성적(B열) 없음 — 최근 2년만 분석";
+    (hasA || hasMockA) && (hasB || hasMockB) ? "A열: 최근 2년 최고점 · B열: 전체 기간 최고점"
+    : !(hasA || hasMockA)                    ? "최근 2년 성적(A열) 없음 — 전체 기간만 분석"
+    :                                          "전체 기간 성적(B열) 없음 — 최근 2년만 분석";
 }
 
 function fillSemesterFilter() {
@@ -476,16 +527,21 @@ function updateThresholdBounds(rows, clampCurrent = true) {
 
   const gpaValues = rows.map((row) => row.gpa);
   const toeicValues = rows.map((row) => row.toeic).filter((v) => Number.isFinite(v));
+  const mockToeicValues = rows.map((row) => row.mockToeic).filter((v) => Number.isFinite(v));
   const minGpa = Number(Math.min(...gpaValues).toFixed(2));
   const maxGpa = Number(Math.max(...gpaValues).toFixed(2));
   const minToeic = toeicValues.length ? Math.min(...toeicValues) : 0;
   const maxToeic = toeicValues.length ? Math.max(...toeicValues) : 990;
+  const minMockToeic = mockToeicValues.length ? Math.min(...mockToeicValues) : 0;
+  const maxMockToeic = mockToeicValues.length ? Math.max(...mockToeicValues) : 990;
 
   state.scoreBounds = {
     minGpa,
     maxGpa,
     minToeic,
     maxToeic,
+    minMockToeic,
+    maxMockToeic,
   };
 
   els.gpaThreshold.min = minGpa;
@@ -498,15 +554,29 @@ function updateThresholdBounds(rows, clampCurrent = true) {
   els.toeicThresholdNumber.min = minToeic;
   els.toeicThresholdNumber.max = maxToeic;
   els.toeicThresholdNumber.step = 1;
+  els.mockToeicThreshold.min = minMockToeic;
+  els.mockToeicThreshold.max = maxMockToeic;
+  els.mockToeicThreshold.step = 1;
+  els.mockToeicThresholdNumber.min = minMockToeic;
+  els.mockToeicThresholdNumber.max = maxMockToeic;
+  els.mockToeicThresholdNumber.step = 1;
+  els.mockToeicThreshold.disabled = !mockToeicValues.length;
+  els.mockToeicThresholdNumber.disabled = !mockToeicValues.length;
+  els.mockToeicHelp.textContent = mockToeicValues.length
+    ? "토익 또는 모의토익 중 하나만 충족해도 토익성적 충족으로 계산"
+    : "모의토익 자료가 없으면 기존 토익 기준만 적용";
 
   if (!clampCurrent) return;
 
   const nextGpa = clamp(Number(els.gpaThreshold.value), minGpa, maxGpa);
   const nextToeic = clamp(Number(els.toeicThreshold.value), minToeic, maxToeic);
+  const nextMockToeic = clamp(Number(els.mockToeicThreshold.value), minMockToeic, maxMockToeic);
   els.gpaThreshold.value = nextGpa.toFixed(2);
   els.gpaThresholdNumber.value = nextGpa.toFixed(2);
   els.toeicThreshold.value = nextToeic;
   els.toeicThresholdNumber.value = nextToeic;
+  els.mockToeicThreshold.value = nextMockToeic;
+  els.mockToeicThresholdNumber.value = nextMockToeic;
 }
 
 function toNumber(value) {
@@ -522,14 +592,16 @@ function render() {
 
   const gpaThreshold = Number(els.gpaThreshold.value);
   const toeicThreshold = Number(els.toeicThreshold.value);
+  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
+  const mockAvailable = hasMockToeicData();
   const total = state.rows.length;
   if (!total) {
     renderEmptyState();
     return;
   }
   const gpaPassRows = state.rows.filter((row) => row.gpa >= gpaThreshold);
-  const toeicPassRows = state.rows.filter((row) => row.toeic >= toeicThreshold);
-  const bothPassRows = state.rows.filter((row) => row.gpa >= gpaThreshold && row.toeic >= toeicThreshold);
+  const toeicPassRows = state.rows.filter((row) => passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable));
+  const bothPassRows = state.rows.filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable));
 
   renderSummaryChips(total);
   els.totalCount.textContent = "100%";
@@ -570,24 +642,42 @@ function getAnalysisRows() {
     .map((row) => ({
       ...row,
       toeic: period === "recent" ? row.toeicA : row.toeicB,
+      mockToeic: period === "recent" ? row.mockToeicA : row.mockToeicB,
       // toeic이 NaN인 학생 = 미응시, 모집단에 포함하되 충족 기준 미달 처리됨
     }));
 
   const grouped = new Map();
   rows.forEach((row) => {
     const previous = grouped.get(row.studentId);
-    const rowHasToeic = Number.isFinite(row.toeic);
-    const previousHasToeic = previous && Number.isFinite(previous.toeic);
+    const rowHasLanguageScore = Number.isFinite(row.toeic) || Number.isFinite(row.mockToeic);
+    const previousHasLanguageScore = previous && (Number.isFinite(previous.toeic) || Number.isFinite(previous.mockToeic));
+    const rowBestLanguageScore = bestLanguageScore(row);
+    const previousBestLanguageScore = previous ? bestLanguageScore(previous) : -Infinity;
     if (
       !previous ||
-      (rowHasToeic && !previousHasToeic) ||
-      (rowHasToeic === previousHasToeic && row.toeic > previous.toeic) ||
-      (rowHasToeic === previousHasToeic && row.toeic === previous.toeic && row.gpa > previous.gpa)
+      (rowHasLanguageScore && !previousHasLanguageScore) ||
+      (rowHasLanguageScore === previousHasLanguageScore && rowBestLanguageScore > previousBestLanguageScore) ||
+      (rowHasLanguageScore === previousHasLanguageScore && rowBestLanguageScore === previousBestLanguageScore && row.gpa > previous.gpa)
     ) {
       grouped.set(row.studentId, row);
     }
   });
   return [...grouped.values()];
+}
+
+function hasMockToeicData() {
+  return state.rows.some((row) => Number.isFinite(row.mockToeic));
+}
+
+function passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable = hasMockToeicData()) {
+  return row.toeic >= toeicThreshold || (mockAvailable && row.mockToeic >= mockToeicThreshold);
+}
+
+function bestLanguageScore(row) {
+  return Math.max(
+    Number.isFinite(row.toeic) ? row.toeic : -Infinity,
+    Number.isFinite(row.mockToeic) ? row.mockToeic : -Infinity,
+  );
 }
 
 function getSelectedSemesters() {
@@ -825,6 +915,8 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   const tMin = state.scoreBounds.minToeic;
   const tMax = state.scoreBounds.maxToeic;
   const finiteToeicRows = state.rows.filter((row) => Number.isFinite(row.toeic));
+  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
+  const mockAvailable = hasMockToeicData();
 
   if (!finiteToeicRows.length) {
     renderBlankCanvas(canvas, "선택한 토익 기간의 성적이 없습니다.");
@@ -850,7 +942,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
     for (let ti = 0; ti < nT; ti++) {
       const g = gMin + gi * gStep;
       const t = tMin + ti * tStep;
-      const count = state.rows.filter((r) => r.gpa >= g && r.toeic >= t).length;
+      const count = state.rows.filter((r) => r.gpa >= g && passesLanguageCriterion(r, t, mockToeicThreshold, mockAvailable)).length;
       const rate = count / total;
       grid[gi][ti] = rate;
       if (rate > gridMax) gridMax = rate;
@@ -921,7 +1013,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.fillStyle = "#10b981"; ctx.fill();
 
   // Current rate bubble
-  const currentCount = state.rows.filter((row) => row.gpa >= gpaThreshold && row.toeic >= toeicThreshold).length;
+  const currentCount = state.rows.filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable)).length;
   const curRate = currentCount / total;
   const bubbleText = `${percentFormat.format(curRate * 100)}%`;
   ctx.font = "800 16px sans-serif";
@@ -1104,6 +1196,10 @@ function adjustComplementaryThreshold(changedCriterion) {
   updateThresholdBounds(state.rows);
 
   const target = Number(els.targetRate.value) / 100;
+  if (changedCriterion === "mockToeic") {
+    applyTargetRateThresholds(true);
+    return;
+  }
   const candidate =
     changedCriterion === "toeic"
       ? findBestGpaForFixedToeic(Number(els.toeicThreshold.value), target)
@@ -1193,7 +1289,9 @@ function findBestToeicForFixedGpa(gpa, target) {
 }
 
 function buildCandidate(gpa, toeic, target) {
-  const both = state.rows.filter((row) => row.gpa >= gpa && row.toeic >= toeic);
+  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
+  const mockAvailable = hasMockToeicData();
+  const both = state.rows.filter((row) => row.gpa >= gpa && passesLanguageCriterion(row, toeic, mockToeicThreshold, mockAvailable));
   const rate = both.length / state.rows.length;
   return {
     gpa,
@@ -1210,11 +1308,13 @@ function findTargetCandidates(target) {
   const gpaValues = state.rows.map((row) => row.gpa);
   const toeicValues = state.rows.map((row) => row.toeic).filter((value) => Number.isFinite(value));
   if (!toeicValues.length) return candidates;
+  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
+  const mockAvailable = hasMockToeicData();
 
   for (let gpa = state.scoreBounds.minGpa; gpa <= state.scoreBounds.maxGpa + 0.001; gpa += 0.05) {
     const roundedGpa = Number(gpa.toFixed(2));
     for (let toeic = state.scoreBounds.minToeic; toeic <= state.scoreBounds.maxToeic; toeic += 25) {
-      const both = state.rows.filter((row) => row.gpa >= roundedGpa && row.toeic >= toeic);
+      const both = state.rows.filter((row) => row.gpa >= roundedGpa && passesLanguageCriterion(row, toeic, mockToeicThreshold, mockAvailable));
       const rate = both.length / state.rows.length;
       const distance = Math.abs(rate - target);
       const academicWeight = percentileRank(gpaValues, roundedGpa);
@@ -1239,8 +1339,10 @@ function exportEligibleCsv() {
   state.rows = getAnalysisRows();
   const gpaThreshold = Number(els.gpaThreshold.value);
   const toeicThreshold = Number(els.toeicThreshold.value);
+  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
+  const mockAvailable = hasMockToeicData();
   const eligible = state.rows
-    .filter((row) => row.gpa >= gpaThreshold && row.toeic >= toeicThreshold)
+    .filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable))
     .map((row) => ({
       ...row.raw,
       분석_학생ID: row.studentId,
@@ -1250,7 +1352,15 @@ function exportEligibleCsv() {
       분석_평균평점: row.gpa,
       분석_토익A_최근2년: Number.isFinite(row.toeicA) ? row.toeicA : "",
       분석_토익B_전체기간: Number.isFinite(row.toeicB) ? row.toeicB : "",
+      분석_모의토익A_최근2년: Number.isFinite(row.mockToeicA) ? row.mockToeicA : "",
+      분석_모의토익B_전체기간: Number.isFinite(row.mockToeicB) ? row.mockToeicB : "",
       분석_적용성적: row.toeic,
+      분석_적용모의토익: Number.isFinite(row.mockToeic) ? row.mockToeic : "",
+      분석_어학충족구분: row.toeic >= toeicThreshold
+        ? "토익"
+        : mockAvailable && row.mockToeic >= mockToeicThreshold
+          ? "모의토익"
+          : "",
       분석_토익기간: document.querySelector('input[name="toeicPeriod"]:checked')?.value === "recent" ? "최근 2년(A)" : "전체 기간(B)",
     }));
 
@@ -1265,7 +1375,7 @@ function exportEligibleCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `eligible_gpa_${gpaThreshold}_toeic_${toeicThreshold}.csv`;
+  link.download = `eligible_gpa_${gpaThreshold}_toeic_${toeicThreshold}_mock_${mockToeicThreshold}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

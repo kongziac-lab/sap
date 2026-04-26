@@ -4,20 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>해외파견 자격 기준 분석 대시보드</title>
+    <meta name="description" content="평균평점과 토익성적 기준에 따른 선발 가능 인원과 분포를 분석하는 대시보드" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <h1>해외파견 자격 기준 분석</h1>
-          <p class="eyebrow">평균평점과 토익성적 기준에 따른 선발 가능 인원과 분포를 분석합니다.</p>
+          <p class="eyebrow">해외파견 선발 분석 시스템</p>
+          <h1>자격 기준 분석 대시보드</h1>
         </div>
-        <div class="privacy-note">🔒 엑셀 자료는 브라우저에서만 처리됩니다.</div>
+        <div class="privacy-note">
+          <iconify-icon icon="solar:lock-password-linear" aria-hidden="true"></iconify-icon>
+          엑셀 자료는 브라우저에서만 처리됩니다.
+        </div>
       </header>
 
       <section class="upload-panel" id="uploadPanel">
@@ -26,9 +33,11 @@
           <p>평균평점·토익 성적이 담긴 엑셀/CSV를 올리면 기준별 통과 인원과 추천 기준을 바로 계산합니다.</p>
         </div>
         <label class="file-drop" for="fileInput">
-          <span class="file-icon" aria-hidden="true">+</span>
-          <span>엑셀/CSV 선택</span>
-          <small>.xlsx, .xls, .csv</small>
+          <span class="file-icon" aria-hidden="true">
+            <iconify-icon icon="solar:cloud-upload-linear"></iconify-icon>
+          </span>
+          <span>엑셀 / CSV 선택</span>
+          <small>.xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .csv</small>
         </label>
         <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" />
       </section>
@@ -75,16 +84,16 @@
             B 취득일자
             <select id="toeicDateColumnB"></select>
           </label>
-          <button id="applyMapping" type="button" class="mapping-submit liquid-fill">분석 시작</button>
+          <button id="applyMapping" type="button" class="mapping-submit">분석 시작</button>
         </div>
       </section>
 
       <section class="dashboard hidden" id="dashboard">
         <aside class="control-panel">
           <label class="compact-upload" for="fileInput">
-            <span aria-hidden="true">↥</span>
-            파일 업로드
-            <small>다른 엑셀/CSV로 다시 분석</small>
+            <iconify-icon icon="solar:upload-minimalistic-linear" aria-hidden="true"></iconify-icon>
+            파일 다시 업로드
+            <small>다른 엑셀/CSV로 재분석</small>
           </label>
 
           <div class="panel-heading">
@@ -164,38 +173,54 @@
             </div>
             <button id="recommendButton" type="button" class="secondary-button">현재 목표 기준 적용</button>
           </div>
-          <button id="exportButton" type="button">동시 충족자 CSV 내보내기</button>
+
+          <button id="exportButton" type="button">
+            <iconify-icon icon="solar:download-minimalistic-linear" style="font-size:15px;margin-right:4px;vertical-align:-2px" aria-hidden="true"></iconify-icon>
+            동시 충족자 CSV 내보내기
+          </button>
         </aside>
 
         <section class="main-grid">
-          <div class="metric-grid">
-            <article class="metric-card">
-              <span>분석 대상 비율</span>
-              <strong id="totalCount">0</strong>
-              <small id="totalCountDetail">0명</small>
-            </article>
-            <article class="metric-card">
-              <span>평균평점 충족률</span>
-              <strong id="gpaPass">0</strong>
-              <small id="gpaPassRate">0%</small>
-            </article>
-            <article class="metric-card">
-              <span>토익 충족률</span>
-              <strong id="toeicPass">0</strong>
-              <small id="toeicPassRate">0%</small>
-            </article>
-            <article class="metric-card accent">
-              <span>두 기준 동시 충족률</span>
-              <strong id="bothPass">0</strong>
-              <small id="bothPassRate">0%</small>
-            </article>
+          <div class="metric-strip">
+            <div class="metric-grid">
+              <article class="metric-card">
+                <span>분석 대상 비율</span>
+                <div class="metric-value-row">
+                  <strong id="totalCount">0</strong>
+                  <small id="totalCountDetail">0명</small>
+                </div>
+              </article>
+              <article class="metric-card">
+                <span>평균평점 충족률</span>
+                <div class="metric-value-row">
+                  <strong id="gpaPass">0</strong>
+                  <small id="gpaPassRate">0%</small>
+                </div>
+              </article>
+              <article class="metric-card">
+                <span>토익 충족률</span>
+                <div class="metric-value-row">
+                  <strong id="toeicPass">0</strong>
+                  <small id="toeicPassRate">0%</small>
+                </div>
+              </article>
+              <article class="metric-card accent">
+                <span>두 기준 동시 충족률</span>
+                <div class="metric-value-row">
+                  <strong id="bothPass">0</strong>
+                  <small id="bothPassRate">0%</small>
+                </div>
+              </article>
+            </div>
           </div>
 
           <div class="analysis-band">
-            <section class="chart-panel wide">
+            <section class="chart-panel">
               <div class="panel-title">
-                <h2>평균평점 × 토익성적 분포지수</h2>
-                <p>색이 진할수록 해당 구간에 학생이 많습니다.</p>
+                <div>
+                  <h2>평균평점 × 토익성적 분포지수</h2>
+                  <p>색이 진할수록 해당 구간에 학생이 많습니다.</p>
+                </div>
               </div>
               <div id="heatmap" class="heatmap" role="img" aria-label="평균평점과 토익성적 교차 분포"></div>
             </section>
@@ -218,15 +243,19 @@
           <div class="analysis-band lower">
             <section class="chart-panel">
               <div class="panel-title">
-                <h2>평균평점 분포</h2>
-                <p id="gpaStats">-</p>
+                <div>
+                  <h2>평균평점 분포</h2>
+                  <p id="gpaStats">-</p>
+                </div>
               </div>
               <div id="gpaHistogram" class="histogram"></div>
             </section>
             <section class="chart-panel">
               <div class="panel-title">
-                <h2>토익성적 분포</h2>
-                <p id="toeicStats">-</p>
+                <div>
+                  <h2>토익성적 분포</h2>
+                  <p id="toeicStats">-</p>
+                </div>
               </div>
               <div id="toeicHistogram" class="histogram"></div>
             </section>
@@ -234,8 +263,10 @@
 
           <section class="chart-panel sensitivity-panel">
             <div class="panel-title">
-              <h2>기준 민감도 분석</h2>
-              <p>기준선을 움직일 때 동시 충족률이 어떻게 변하는지 넓은 화면에서 확인합니다.</p>
+              <div>
+                <h2>기준 민감도 분석</h2>
+                <p>기준선을 움직일 때 동시 충족률이 어떻게 변하는지 넓은 화면에서 확인합니다.</p>
+              </div>
             </div>
             <canvas id="sensitivityCanvas" width="1440" height="560"></canvas>
           </section>

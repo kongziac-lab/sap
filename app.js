@@ -640,8 +640,8 @@ function renderHeatmap(gpaThreshold, toeicThreshold) {
         const eligible = gpaBins[gpaIndex][1] > gpaThreshold && bin[1] > toeicThreshold;
         cell.classList.toggle("eligible", eligible);
         cell.style.background = eligible
-          ? `rgba(139, 114, 232, ${0.14 + intensity * 0.76})`
-          : `rgba(244, 114, 182, ${0.06 + intensity * 0.48})`;
+          ? `rgba(16, 185, 129, ${0.10 + intensity * 0.65})`
+          : `rgba(244, 63, 94, ${0.05 + intensity * 0.38})`;
         cell.title = `분포지수: ${percentFormat.format(percent)}%`;
         els.heatmap.append(cell);
       });
@@ -676,9 +676,9 @@ function renderScatter(gpaThreshold, toeicThreshold) {
   const plotH = height - pad * 2;
 
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#fbfcfe";
+  ctx.fillStyle = "#08111f";
   ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = "#d9e2ed";
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.10)";
   ctx.lineWidth = 1;
 
   for (let i = 0; i <= 5; i += 1) {
@@ -696,23 +696,23 @@ function renderScatter(gpaThreshold, toeicThreshold) {
     if (index % sampleStep !== 0) return;
     if (!Number.isFinite(row.toeic)) return; // 미응시 제외
     const eligible = row.gpa >= gpaThreshold && row.toeic >= toeicThreshold;
-    ctx.fillStyle = eligible ? "rgba(139, 114, 232, 0.65)" : "rgba(244, 114, 182, 0.25)";
+    ctx.fillStyle = eligible ? "rgba(16, 185, 129, 0.72)" : "rgba(244, 63, 94, 0.22)";
     ctx.beginPath();
     ctx.arc(toX(row.gpa), toY(row.toeic), eligible ? 2.4 : 1.8, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  ctx.strokeStyle = "rgba(232, 121, 160, 0.9)";
+  ctx.strokeStyle = "rgba(244, 63, 94, 0.85)";
   ctx.lineWidth = 2;
   const thresholdX = toX(gpaThreshold);
   const thresholdY = toY(toeicThreshold);
   line(ctx, thresholdX, pad, thresholdX, height - pad);
   line(ctx, pad, thresholdY, width - pad, thresholdY);
 
-  drawThresholdBadge(ctx, `평점 ${gpaThreshold.toFixed(2)}`, clamp(thresholdX + 8, pad + 4, width - pad - 92), pad + 10, "#8b72e8");
-  drawThresholdBadge(ctx, `토익 ${numberFormat.format(toeicThreshold)}`, pad + 10, clamp(thresholdY - 30, pad + 4, height - pad - 30), "#e879a0");
+  drawThresholdBadge(ctx, `평점 ${gpaThreshold.toFixed(2)}`, clamp(thresholdX + 8, pad + 4, width - pad - 92), pad + 10, "#10b981");
+  drawThresholdBadge(ctx, `토익 ${numberFormat.format(toeicThreshold)}`, pad + 10, clamp(thresholdY - 30, pad + 4, height - pad - 30), "#f43f5e");
 
-  ctx.fillStyle = "#3d4a5c";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "700 14px sans-serif";
   ctx.fillText("평균평점", width - 104, height - 14);
   ctx.save();
@@ -727,13 +727,13 @@ function drawThresholdBadge(ctx, text, x, y, color) {
   ctx.font = "800 13px sans-serif";
   const width = Math.ceil(ctx.measureText(text).width) + 18;
   const height = 24;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+  ctx.fillStyle = "rgba(8, 17, 31, 0.92)";
   ctx.strokeStyle = color;
   ctx.lineWidth = 1.5;
   roundRect(ctx, x, y, width, height, 5);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "#263445";
+  ctx.fillStyle = "#f0f4ff";
   ctx.fillText(text, x + 9, y + 16);
   ctx.restore();
 }
@@ -751,9 +751,9 @@ function roundRect(ctx, x, y, width, height, radius) {
 function renderBlankCanvas(canvas, message) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fbfcfe";
+  ctx.fillStyle = "#08111f";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#637083";
+  ctx.fillStyle = "#475569";
   ctx.font = "700 18px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(message, canvas.width / 2, canvas.height / 2);
@@ -768,7 +768,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   const total = state.rows.length || 1;
 
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#fbfcfe";
+  ctx.fillStyle = "#08111f";
   ctx.fillRect(0, 0, W, H);
 
   if (!total) { renderBlankCanvas(canvas, "데이터가 없습니다."); return; }
@@ -850,9 +850,9 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
             labeled.add(key);
             const cx2 = toX(gi);
             const cy2 = toY(ti);
-            ctx.fillStyle = "rgba(255,255,255,0.82)";
+            ctx.fillStyle = "rgba(8, 17, 31, 0.88)";
             ctx.fillRect(cx2 - 17, cy2 - 11, 34, 16);
-            ctx.fillStyle = "rgba(60,40,100,0.75)";
+            ctx.fillStyle = "rgba(240, 244, 255, 0.9)";
             ctx.fillText(`${Math.round(iso * 100)}%`, cx2, cy2);
           }
         }
@@ -878,7 +878,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2);
   ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fill();
   ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-  ctx.fillStyle = "#e879a0"; ctx.fill();
+  ctx.fillStyle = "#10b981"; ctx.fill();
 
   // Current rate bubble
   const giC = clamp(Math.round(cgFrac * (nG - 1)), 0, nG - 1);
@@ -889,15 +889,15 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   const bw = ctx.measureText(bubbleText).width + 16;
   const bx = cx + 12 + bw < padLeft + plotW ? cx + 12 : cx - bw - 12;
   const by = cy - 26 > padTop + 6 ? cy - 26 : cy + 14;
-  ctx.fillStyle = "rgba(232, 121, 160, 0.92)";
+  ctx.fillStyle = "rgba(16, 185, 129, 0.92)";
   ctx.beginPath();
   ctx.roundRect(bx - 7, by - 16, bw + 4, 26, 6);
   ctx.fill();
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = "#012118";
   ctx.fillText(bubbleText, bx, by);
 
   // X axis — GPA
-  ctx.fillStyle = "#8a97a8";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "700 13px sans-serif";
   ctx.textAlign = "center";
   const gTickN = Math.min(8, nG - 1);
@@ -906,13 +906,13 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
     const gpa = gMin + gi * gStep;
     ctx.fillText(gpa.toFixed(1), toX(gi), padTop + plotH + 20);
   }
-  ctx.fillStyle = "#3d4a5c";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "800 14px sans-serif";
   ctx.fillText("평균평점 기준 →", padLeft + plotW / 2, padTop + plotH + 46);
 
   // Y axis — TOEIC
   ctx.textAlign = "right";
-  ctx.fillStyle = "#8a97a8";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "700 13px sans-serif";
   const tTickN = Math.min(7, nT - 1);
   for (let i = 0; i <= tTickN; i++) {
@@ -923,7 +923,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.save();
   ctx.translate(18, padTop + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillStyle = "#3d4a5c";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "800 14px sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("토익 기준 →", 0, 0);
@@ -931,7 +931,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.textAlign = "left";
 
   // Plot border
-  ctx.strokeStyle = "#ccd2de";
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
   ctx.lineWidth = 1;
   ctx.strokeRect(padLeft, padTop, plotW, plotH);
 
@@ -944,11 +944,11 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
     ctx.fillStyle = sensitivityColor(1 - i / lgH);
     ctx.fillRect(lgX, lgY + i, lgW, 1.5);
   }
-  ctx.strokeStyle = "#ccd2de";
+  ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
   ctx.lineWidth = 1;
   ctx.strokeRect(lgX, lgY, lgW, lgH);
 
-  ctx.fillStyle = "#637083";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "700 12px sans-serif";
   ctx.textAlign = "left";
   for (let i = 0; i <= 5; i++) {
@@ -956,19 +956,19 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
     const ly = lgY + (i / 5) * lgH;
     ctx.fillText(`${Math.round(rate * 100)}%`, lgX + lgW + 5, ly + 4);
   }
-  ctx.fillStyle = "#3d4a5c";
+  ctx.fillStyle = "#94a3b8";
   ctx.font = "800 12px sans-serif";
   ctx.fillText("동시충족", lgX - 2, lgY - 7);
 }
 
 function sensitivityColor(t) {
-  // t=1: deep purple, t=0.6: soft purple, t=0.3: pink, t=0: near-white lavender
+  // t=0: near-black, t=1: bright emerald (dark mode)
   const stops = [
-    [0, [248, 244, 255]],
-    [0.2, [219, 195, 251]],
-    [0.45, [244, 114, 182]],
-    [0.7, [157, 141, 241]],
-    [1.0, [99, 72, 210]],
+    [0,    [8,   17,  31]],
+    [0.2,  [4,   55,  43]],
+    [0.42, [6,   95,  70]],
+    [0.68, [16,  185, 129]],
+    [1.0,  [52,  211, 153]],
   ];
   for (let i = 1; i < stops.length; i++) {
     const [t0, c0] = stops[i - 1];
@@ -1010,7 +1010,7 @@ function renderHistogram(container, values, bins, threshold, noScoreCount = 0) {
     const fill = document.createElement("div");
     fill.className = "bar-fill";
     fill.style.width = `${(noScoreCount / max) * 100}%`;
-    fill.style.background = "repeating-linear-gradient(135deg, #d0d6e0 0px, #d0d6e0 3px, #e8ecf2 3px, #e8ecf2 7px)";
+    fill.style.background = "repeating-linear-gradient(135deg, #1e3a2e 0px, #1e3a2e 3px, #0f2419 3px, #0f2419 7px)";
     track.append(fill);
 
     const count = document.createElement("span");
@@ -1034,7 +1034,9 @@ function renderHistogram(container, values, bins, threshold, noScoreCount = 0) {
     const fill = document.createElement("div");
     fill.className = "bar-fill";
     fill.style.width = `${(counts[index] / max) * 100}%`;
-    fill.style.background = bin[1] > threshold ? "linear-gradient(90deg, #8b72e8, #b39df5)" : "#c4b5fd66";
+    fill.style.background = bin[1] > threshold
+      ? "linear-gradient(90deg, #059669, #10b981, #34d399)"
+      : "rgba(16, 185, 129, 0.18)";
     track.append(fill);
 
     const count = document.createElement("span");

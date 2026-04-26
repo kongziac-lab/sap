@@ -393,8 +393,8 @@ function normalizeSemester(value) {
   if (!value) return "";
   const number = String(value).match(/\d+/)?.[0];
   if (!number) return value;
-  const semester = Number(number);
-  return semester >= 1 && semester <= 8 ? `${semester}학기` : `${semester}학기`;
+  const semester = clamp(Number(number), 1, 8);
+  return `${semester}학기`;
 }
 
 function parseDateValue(value) {

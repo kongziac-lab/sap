@@ -921,9 +921,8 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.fillStyle = "#10b981"; ctx.fill();
 
   // Current rate bubble
-  const giC = clamp(Math.round(cgFrac * (nG - 1)), 0, nG - 1);
-  const tiC = clamp(Math.round(ctFrac * (nT - 1)), 0, nT - 1);
-  const curRate = grid[giC][tiC];
+  const currentCount = state.rows.filter((row) => row.gpa >= gpaThreshold && row.toeic >= toeicThreshold).length;
+  const curRate = currentCount / total;
   const bubbleText = `${percentFormat.format(curRate * 100)}%`;
   ctx.font = "800 16px sans-serif";
   const bw = ctx.measureText(bubbleText).width + 16;
@@ -994,7 +993,8 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   for (let i = 0; i <= 5; i++) {
     const rate = (1 - i / 5) * gridMax;
     const ly = lgY + (i / 5) * lgH;
-    ctx.fillText(`${Math.round(rate * 100)}%`, lgX + lgW + 5, ly + 4);
+    const label = i === 0 ? `최대 ${Math.round(rate * 100)}%` : `${Math.round(rate * 100)}%`;
+    ctx.fillText(label, lgX + lgW + 5, ly + 4);
   }
   ctx.fillStyle = "#94a3b8";
   ctx.font = "800 12px sans-serif";

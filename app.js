@@ -78,6 +78,11 @@ const percentFormat = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 1,
 });
 let targetRateTimer = null;
+const DEFAULT_DATASET = {
+  url: "./data/2026_1_students.csv",
+  displayName: "2026학년도 1학기",
+  sourceName: "2026_1_students.csv",
+};
 
 const gpaBins = [
   [0, 2],
@@ -118,6 +123,8 @@ document.querySelectorAll('input[name="targetMode"]').forEach((input) => input.a
 syncCriterionPair(els.gpaThreshold, els.gpaThresholdNumber, "gpa");
 syncCriterionPair(els.toeicThreshold, els.toeicThresholdNumber, "toeic");
 syncPair(els.targetRate, els.targetRateNumber, scheduleTargetAutoApply);
+
+loadDefaultDataset();
 
 els.toeicThreshold.step = 1;
 els.toeicThresholdNumber.step = 1;
@@ -199,6 +206,34 @@ async function handleFile(event) {
     return;
   }
 
+  loadRowsForMapping(rows, file.name, { autoAnalyze: false });
+}
+
+async function loadDefaultDataset() {
+  if (!window.XLSX) {
+    els.mappingHelp.textContent = "엑셀 파서가 로드되지 않아 기본 분석 파일을 불러오지 못했습니다.";
+    els.mappingPanel.classList.remove("hidden");
+    return;
+  }
+
+  try {
+    const response = await fetch(DEFAULT_DATASET.url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const file = new File([blob], DEFAULT_DATASET.sourceName, { type: "text/csv" });
+    const rows = await readSpreadsheetRows(file);
+
+    if (!rows.length) throw new Error("empty dataset");
+    loadRowsForMapping(rows, DEFAULT_DATASET.displayName, { autoAnalyze: true });
+  } catch (error) {
+    console.warn("Default dataset load failed:", error);
+    els.mappingHelp.textContent = "기본 분석 파일을 자동으로 불러오지 못했습니다. 엑셀/CSV 파일을 업로드해 주세요.";
+    els.mappingPanel.classList.remove("hidden");
+  }
+}
+
+function loadRowsForMapping(rows, displayName, { autoAnalyze = false } = {}) {
+  state.fileName = displayName;
   state.rawRows = rows;
   state.headers = Object.keys(rows[0]);
   state.studentIdColumn = findLikelyColumn(state.headers, ["학번", "학생id", "studentid", "id", "studentno"], true);
@@ -225,8 +260,10 @@ async function handleFile(event) {
   fillSelect(els.toeicDateColumnA, state.headers, state.toeicDateColumnA, true);
   fillSelect(els.toeicColumnB, state.headers, state.toeicColumnB, true);
   fillSelect(els.toeicDateColumnB, state.headers, state.toeicDateColumnB, true);
-  els.mappingHelp.textContent = `${file.name}에서 ${numberFormat.format(rows.length)}개 행을 읽었습니다. 자동 매핑이 다르면 열을 바꿔 주세요.`;
+  els.mappingHelp.textContent = `${displayName} 분석 파일에서 ${numberFormat.format(rows.length)}개 행을 읽었습니다. 자동 매핑이 다르면 열을 바꿔 주세요.`;
   els.mappingPanel.classList.remove("hidden");
+
+  if (autoAnalyze) applyMapping();
 }
 
 async function readSpreadsheetRows(file) {
@@ -333,6 +370,7 @@ function applyMapping() {
   els.toeicThresholdNumber.value = state.scoreBounds.minToeic;
 
   els.uploadPanel.classList.add("hidden");
+  els.mappingPanel.classList.add("hidden");
   els.dashboard.classList.remove("hidden");
   document.getElementById("targetRateSection").classList.toggle("hidden", !isAutoTargetMode());
   if (isAutoTargetMode()) applyTargetRateThresholds(true);
@@ -577,8 +615,10 @@ function renderSummaryChips(total) {
   const svgSemester = ic(`<path d="M4 19.5V6a2 2 0 0 1 2-2h12v16H6a2 2 0 0 1-2-.5z"/><path d="M8 8h6M8 12h4"/>`);
   const svgPeriod = ic(`<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>`);
   const svgCount  = ic(`<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>`);
+  const svgFile = ic(`<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>`);
 
   els.dataSummary.innerHTML = [
+    `<span class="summary-chip chip-file">${svgFile}${state.fileName || "분석 파일"}</span>`,
     `<span class="summary-chip">${svgDept}${department}</span>`,
     `<span class="summary-chip">${svgGrade}${grade}</span>`,
     `<span class="summary-chip">${svgSemester}${semesterText}</span>`,

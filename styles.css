@@ -662,6 +662,16 @@ button:hover::after {
   color: var(--accent);
 }
 
+.summary-chip.chip-file {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.22);
+  color: #2456c6;
+}
+
+.summary-chip.chip-file svg {
+  color: #2456c6;
+}
+
 /* ---- Filter / threshold rows ---- */
 .filter-row {
   display: grid;

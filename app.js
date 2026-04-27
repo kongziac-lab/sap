@@ -489,10 +489,10 @@ function parseDateValue(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function isWithin5Years(date) {
+function isWithinYears(date, years) {
   if (!date) return false;
   const cutoff = new Date();
-  cutoff.setFullYear(cutoff.getFullYear() - 5);
+  cutoff.setFullYear(cutoff.getFullYear() - years);
   return date >= cutoff;
 }
 
@@ -511,8 +511,8 @@ function populateFilters() {
 
   document.querySelectorAll('input[name="toeicPeriod"]').forEach((input) => {
     if (input.value === "recent") {
-      input.disabled = !(hasA || hasMockA);
-      if (!(hasA || hasMockA) && input.checked) {
+      input.disabled = !(hasB || hasMockB) || !hasBDate;
+      if (input.disabled && input.checked) {
         document.querySelector('input[name="toeicPeriod"][value="all"]').checked = true;
       }
     }
@@ -527,10 +527,10 @@ function populateFilters() {
     }
   });
 
-  els.periodHelp.textContent =
-    (hasA || hasMockA) && (hasB || hasMockB) ? "A열: 최근 2년 최고점 · B열: 전체 기간 최고점"
-    : !(hasA || hasMockA)                    ? "최근 2년 성적(A열) 없음 — 전체 기간만 분석"
-    :                                          "전체 기간 성적(B열) 없음 — 최근 2년만 분석";
+  els.periodHelp.textContent = hasBDate
+    ? "B열 성적 기준 · 취득일로 기간 필터 적용"
+    : (hasB || hasMockB) ? "B열 성적만 있음 — 전체 기간만 분석 가능"
+    : "성적 데이터 없음";
 }
 
 function fillSemesterFilter() {
@@ -714,11 +714,11 @@ function getAnalysisRows() {
     })
     .map((row) => ({
       ...row,
-      toeic: period === "recent" ? row.toeicA
-           : period === "recent5y" ? (isWithin5Years(row.toeicDateB) ? row.toeicB : Number.NaN)
+      toeic: period === "recent"   ? (isWithinYears(row.toeicDateB, 2)  ? row.toeicB : Number.NaN)
+           : period === "recent5y" ? (isWithinYears(row.toeicDateB, 5)  ? row.toeicB : Number.NaN)
            : row.toeicB,
-      mockToeic: period === "recent" ? row.mockToeicA
-               : period === "recent5y" ? (isWithin5Years(row.mockToeicDateB) ? row.mockToeicB : Number.NaN)
+      mockToeic: period === "recent"   ? (isWithinYears(row.mockToeicDateB, 2) ? row.mockToeicB : Number.NaN)
+               : period === "recent5y" ? (isWithinYears(row.mockToeicDateB, 5) ? row.mockToeicB : Number.NaN)
                : row.mockToeicB,
       languageScore: Number.NaN,
       // toeic이 NaN인 학생 = 미응시, 모집단에 포함하되 충족 기준 미달 처리됨
@@ -1536,7 +1536,7 @@ function exportEligibleCsv() {
         : row.mockToeic >= toeicThreshold
           ? "모의토익"
           : "",
-      분석_토익기간: (() => { const v = document.querySelector('input[name="toeicPeriod"]:checked')?.value; return v === "recent" ? "최근 2년(A)" : v === "recent5y" ? "최근 5년(B+날짜)" : "전체 기간(B)"; })(),
+      분석_토익기간: (() => { const v = document.querySelector('input[name="toeicPeriod"]:checked')?.value; return v === "recent" ? "최근 2년(B+날짜)" : v === "recent5y" ? "최근 5년(B+날짜)" : "전체 기간(B)"; })(),
     }));
 
   if (!eligible.length) {

@@ -730,6 +730,10 @@ button:hover::after {
   background: #f1f5f9;
 }
 
+.segmented.segmented-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .segmented label {
   display: block;
   cursor: pointer;

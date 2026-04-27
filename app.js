@@ -489,6 +489,13 @@ function parseDateValue(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function isWithin5Years(date) {
+  if (!date) return false;
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - 5);
+  return date >= cutoff;
+}
+
 function populateFilters() {
   fillFilter(els.collegeFilter, ["전체 단과대학", ...uniqueSorted(state.parsedRows.map((row) => row.college))]);
   fillFilter(els.departmentFilter, ["전체 학과", ...uniqueSorted(state.parsedRows.map((row) => row.department))]);
@@ -500,6 +507,8 @@ function populateFilters() {
   const hasMockA = state.parsedRows.some((row) => Number.isFinite(row.mockToeicA));
   const hasMockB = state.parsedRows.some((row) => Number.isFinite(row.mockToeicB));
 
+  const hasBDate = state.parsedRows.some((row) => row.toeicDateB || row.mockToeicDateB);
+
   document.querySelectorAll('input[name="toeicPeriod"]').forEach((input) => {
     if (input.value === "recent") {
       input.disabled = !(hasA || hasMockA);
@@ -509,6 +518,12 @@ function populateFilters() {
     }
     if (input.value === "all") {
       input.disabled = !(hasB || hasMockB);
+    }
+    if (input.value === "recent5y") {
+      input.disabled = !(hasB || hasMockB) || !hasBDate;
+      if (input.disabled && input.checked) {
+        document.querySelector('input[name="toeicPeriod"][value="all"]').checked = true;
+      }
     }
   });
 
@@ -699,8 +714,12 @@ function getAnalysisRows() {
     })
     .map((row) => ({
       ...row,
-      toeic: period === "recent" ? row.toeicA : row.toeicB,
-      mockToeic: period === "recent" ? row.mockToeicA : row.mockToeicB,
+      toeic: period === "recent" ? row.toeicA
+           : period === "recent5y" ? (isWithin5Years(row.toeicDateB) ? row.toeicB : Number.NaN)
+           : row.toeicB,
+      mockToeic: period === "recent" ? row.mockToeicA
+               : period === "recent5y" ? (isWithin5Years(row.mockToeicDateB) ? row.mockToeicB : Number.NaN)
+               : row.mockToeicB,
       languageScore: Number.NaN,
       // toeic이 NaN인 학생 = 미응시, 모집단에 포함하되 충족 기준 미달 처리됨
     }))
@@ -831,7 +850,8 @@ function renderSummaryChips(total) {
   const semesterText = semesters.length === els.semesterFilter.querySelectorAll('input[type="checkbox"]').length
     ? "전체 인정학기"
     : semesters.join(", ");
-  const period = document.querySelector('input[name="toeicPeriod"]:checked')?.value === "recent" ? "최근 2년" : "전체 기간";
+  const periodVal = document.querySelector('input[name="toeicPeriod"]:checked')?.value;
+  const period = periodVal === "recent" ? "최근 2년" : periodVal === "recent5y" ? "최근 5년" : "전체 기간";
 
   const ic = (path) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
@@ -1516,7 +1536,7 @@ function exportEligibleCsv() {
         : row.mockToeic >= toeicThreshold
           ? "모의토익"
           : "",
-      분석_토익기간: document.querySelector('input[name="toeicPeriod"]:checked')?.value === "recent" ? "최근 2년(A)" : "전체 기간(B)",
+      분석_토익기간: (() => { const v = document.querySelector('input[name="toeicPeriod"]:checked')?.value; return v === "recent" ? "최근 2년(A)" : v === "recent5y" ? "최근 5년(B+날짜)" : "전체 기간(B)"; })(),
     }));
 
   if (!eligible.length) {

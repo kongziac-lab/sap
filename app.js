@@ -95,9 +95,9 @@ const percentFormat = new Intl.NumberFormat("ko-KR", {
 });
 let targetRateTimer = null;
 const DEFAULT_DATASET = {
-  url: "./data/2026_1_students.csv",
+  url: "./data/2026_1_students.xlsx",
   displayName: "2026학년도 1학기",
-  sourceName: "2026_1_students.csv",
+  sourceName: "2026_1_students.xlsx",
 };
 
 const gpaBins = [
@@ -249,7 +249,9 @@ async function loadDefaultDataset() {
     const response = await fetch(DEFAULT_DATASET.url, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob = await response.blob();
-    const file = new File([blob], DEFAULT_DATASET.sourceName, { type: "text/csv" });
+    const file = new File([blob], DEFAULT_DATASET.sourceName, {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
     const rows = await readSpreadsheetRows(file);
 
     if (!rows.length) throw new Error("empty dataset");

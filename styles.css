@@ -959,7 +959,7 @@ input[type="range"] {
 .metric-card small {
   display: inline;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: clamp(9px, 0.85vw, 13px);
   font-weight: 600;
   letter-spacing: -0.01em;
 }

@@ -17,6 +17,7 @@ const state = {
     maxMockToeic: 990,
   },
   studentIdColumn: "",
+  collegeColumn: "",
   departmentColumn: "",
   gradeColumn: "",
   semesterColumn: "",
@@ -39,6 +40,7 @@ const els = {
   mappingPanel: document.querySelector("#mappingPanel"),
   mappingHelp: document.querySelector("#mappingHelp"),
   studentIdColumn: document.querySelector("#studentIdColumn"),
+  collegeColumn: document.querySelector("#collegeColumn"),
   departmentColumn: document.querySelector("#departmentColumn"),
   gradeColumn: document.querySelector("#gradeColumn"),
   semesterColumn: document.querySelector("#semesterColumn"),
@@ -54,6 +56,7 @@ const els = {
   applyMapping: document.querySelector("#applyMapping"),
   dashboard: document.querySelector("#dashboard"),
   dataSummary: document.querySelector("#dataSummary"),
+  collegeFilter: document.querySelector("#collegeFilter"),
   departmentFilter: document.querySelector("#departmentFilter"),
   gradeFilter: document.querySelector("#gradeFilter"),
   semesterFilter: document.querySelector("#semesterFilter"),
@@ -141,6 +144,10 @@ els.loadCombinedPreset?.addEventListener("click", () => {
 els.applyMapping.addEventListener("click", applyMapping);
 els.recommendButton.addEventListener("click", applyCurrentTarget);
 els.exportButton.addEventListener("click", exportEligibleCsv);
+els.collegeFilter.addEventListener("change", () => {
+  updateDepartmentFilterOptions();
+  handleAnalysisContextChange();
+});
 els.departmentFilter.addEventListener("change", handleAnalysisContextChange);
 els.gradeFilter.addEventListener("change", handleAnalysisContextChange);
 els.semesterFilter.addEventListener("change", handleAnalysisContextChange);
@@ -281,6 +288,7 @@ function loadRowsForMapping(rows, displayName, { autoAnalyze = false } = {}) {
   state.rawRows = rows;
   state.headers = Object.keys(rows[0]);
   state.studentIdColumn = findLikelyColumn(state.headers, ["학번", "학생id", "studentid", "id", "studentno"], true);
+  state.collegeColumn = findLikelyColumn(state.headers, ["단과대학", "대학", "college", "faculty", "school"], true);
   state.departmentColumn = findLikelyColumn(state.headers, ["학과", "전공", "소속", "department", "major"], true);
   state.gradeColumn = findLikelyColumn(state.headers, ["학년", "gradelevel", "year", "학기"], true);
   state.semesterColumn = findLikelyColumn(state.headers, ["인정학기", "등록학기", "이수학기", "semester", "term"], true);
@@ -300,6 +308,7 @@ function loadRowsForMapping(rows, displayName, { autoAnalyze = false } = {}) {
   }
 
   fillSelect(els.studentIdColumn, state.headers, state.studentIdColumn, true);
+  fillSelect(els.collegeColumn, state.headers, state.collegeColumn, true);
   fillSelect(els.departmentColumn, state.headers, state.departmentColumn, true);
   fillSelect(els.gradeColumn, state.headers, state.gradeColumn, true);
   fillSelect(els.semesterColumn, state.headers, state.semesterColumn, true);
@@ -381,6 +390,7 @@ function fillSelect(select, headers, selected, optional) {
 
 function applyMapping() {
   state.studentIdColumn = els.studentIdColumn.value;
+  state.collegeColumn = els.collegeColumn.value;
   state.departmentColumn = els.departmentColumn.value;
   state.gradeColumn = els.gradeColumn.value;
   state.semesterColumn = els.semesterColumn.value;
@@ -401,6 +411,7 @@ function applyMapping() {
       index: index + 1,
       raw: row,
       studentId: getStringValue(row, state.studentIdColumn) || `row-${index + 1}`,
+      college: getStringValue(row, state.collegeColumn) || "미분류",
       department: getStringValue(row, state.departmentColumn) || "미분류",
       gradeLevel: normalizeGrade(getStringValue(row, state.gradeColumn)) || "미분류",
       semester: normalizeSemester(getStringValue(row, state.semesterColumn)) || "미분류",
@@ -479,6 +490,7 @@ function parseDateValue(value) {
 }
 
 function populateFilters() {
+  fillFilter(els.collegeFilter, ["전체 단과대학", ...uniqueSorted(state.parsedRows.map((row) => row.college))]);
   fillFilter(els.departmentFilter, ["전체 학과", ...uniqueSorted(state.parsedRows.map((row) => row.department))]);
   fillFilter(els.gradeFilter, ["전체 학년", ...uniqueSorted(state.parsedRows.map((row) => row.gradeLevel), compareGrade)]);
   fillSemesterFilter();
@@ -656,13 +668,22 @@ function render() {
     : `미응시 ${numberFormat.format(noScoreCount)}명`;
 }
 
+function updateDepartmentFilterOptions() {
+  const college = els.collegeFilter.value;
+  const depts = college === "all"
+    ? state.parsedRows.map((r) => r.department)
+    : state.parsedRows.filter((r) => r.college === college).map((r) => r.department);
+  fillFilter(els.departmentFilter, ["전체 학과", ...uniqueSorted(depts)]);
+}
+
 function getAnalysisRows() {
+  const college = els.collegeFilter.value;
   const department = els.departmentFilter.value;
   const grade = els.gradeFilter.value;
   const period = document.querySelector('input[name="toeicPeriod"]:checked')?.value || "all";
   const selectedSemesters = getSelectedSemesters();
   const semesterKey = [...selectedSemesters].sort(compareSemester).join("|");
-  const cacheKey = `${department}__${grade}__${period}__${semesterKey}`;
+  const cacheKey = `${college}__${department}__${grade}__${period}__${semesterKey}`;
 
   if (state.analysisCacheValid && state.analysisCacheKey === cacheKey) {
     return state.analysisRowsCache;
@@ -670,6 +691,7 @@ function getAnalysisRows() {
 
   const rows = state.parsedRows
     .filter((row) => {
+      if (college !== "all" && row.college !== college) return false;
       if (department !== "all" && row.department !== department) return false;
       if (grade !== "all" && row.gradeLevel !== grade) return false;
       if (selectedSemesters.size && !selectedSemesters.has(row.semester)) return false;
@@ -802,6 +824,7 @@ function percentileRankFromSorted(sortedValues, value) {
 }
 
 function renderSummaryChips(total) {
+  const college = els.collegeFilter.value === "all" ? "전체 단과대학" : els.collegeFilter.value;
   const department = els.departmentFilter.value === "all" ? "전체 학과" : els.departmentFilter.value;
   const grade = els.gradeFilter.value === "all" ? "전체 학년" : els.gradeFilter.value;
   const semesters = [...getSelectedSemesters()].sort(compareSemester);
@@ -813,6 +836,7 @@ function renderSummaryChips(total) {
   const ic = (path) =>
     `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
 
+  const svgCollege = ic(`<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`);
   const svgDept   = ic(`<rect x="3" y="9" width="18" height="13" rx="1"/><path d="M8 9V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v4"/>`);
   const svgGrade  = ic(`<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>`);
   const svgSemester = ic(`<path d="M4 19.5V6a2 2 0 0 1 2-2h12v16H6a2 2 0 0 1-2-.5z"/><path d="M8 8h6M8 12h4"/>`);
@@ -822,6 +846,7 @@ function renderSummaryChips(total) {
 
   els.dataSummary.innerHTML = [
     `<span class="summary-chip chip-file">${svgFile}${state.fileName || "분석 파일"}</span>`,
+    `<span class="summary-chip">${svgCollege}${college}</span>`,
     `<span class="summary-chip">${svgDept}${department}</span>`,
     `<span class="summary-chip">${svgGrade}${grade}</span>`,
     `<span class="summary-chip">${svgSemester}${semesterText}</span>`,

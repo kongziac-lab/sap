@@ -33,6 +33,8 @@ const state = {
 
 const els = {
   fileInput: document.querySelector("#fileInput"),
+  loadToeicPreset: document.querySelector("#loadToeicPreset"),
+  loadCombinedPreset: document.querySelector("#loadCombinedPreset"),
   uploadPanel: document.querySelector("#uploadPanel"),
   mappingPanel: document.querySelector("#mappingPanel"),
   mappingHelp: document.querySelector("#mappingHelp"),
@@ -130,6 +132,12 @@ els.fileInput.addEventListener("click", () => {
   els.fileInput.value = "";
 });
 els.fileInput.addEventListener("change", handleFile);
+els.loadToeicPreset?.addEventListener("click", () => {
+  loadPresetDataset("./data/2026_1_students.xlsx", "data/2026_1_students.xlsx: 토익점수", "2026_1_students.xlsx");
+});
+els.loadCombinedPreset?.addEventListener("click", () => {
+  loadPresetDataset("./data/2026_1_students(a).xlsx", "data/2026_1_students(a).xlsx: 토익+모의점수", "2026_1_students(a).xlsx");
+});
 els.applyMapping.addEventListener("click", applyMapping);
 els.recommendButton.addEventListener("click", applyCurrentTarget);
 els.exportButton.addEventListener("click", exportEligibleCsv);
@@ -143,8 +151,6 @@ syncCriterionPair(els.gpaThreshold, els.gpaThresholdNumber, "gpa");
 syncCriterionPair(els.toeicThreshold, els.toeicThresholdNumber, "toeic");
 syncCriterionPair(els.mockToeicThreshold, els.mockToeicThresholdNumber, "mockToeic");
 syncPair(els.targetRate, els.targetRateNumber, scheduleTargetAutoApply);
-
-loadDefaultDataset();
 
 els.toeicThreshold.step = 1;
 els.toeicThresholdNumber.step = 1;
@@ -238,7 +244,7 @@ async function handleFile(event) {
   loadRowsForMapping(rows, file.name, { autoAnalyze: false });
 }
 
-async function loadDefaultDataset() {
+async function loadPresetDataset(url, displayName, sourceName) {
   if (!window.XLSX) {
     els.mappingHelp.textContent = "엑셀 파서가 로드되지 않아 기본 분석 파일을 불러오지 못했습니다.";
     els.mappingPanel.classList.remove("hidden");
@@ -246,18 +252,18 @@ async function loadDefaultDataset() {
   }
 
   try {
-    const response = await fetch(DEFAULT_DATASET.url, { cache: "no-store" });
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const blob = await response.blob();
-    const file = new File([blob], DEFAULT_DATASET.sourceName, {
+    const file = new File([blob], sourceName, {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const rows = await readSpreadsheetRows(file);
 
     if (!rows.length) throw new Error("empty dataset");
-    loadRowsForMapping(rows, DEFAULT_DATASET.displayName, { autoAnalyze: true });
+    loadRowsForMapping(rows, displayName, { autoAnalyze: false });
   } catch (error) {
-    console.warn("Default dataset load failed:", error);
+    console.warn("Preset dataset load failed:", error);
     els.mappingHelp.textContent = "기본 분석 파일을 자동으로 불러오지 못했습니다. 엑셀/CSV 파일을 업로드해 주세요.";
     els.mappingPanel.classList.remove("hidden");
   }

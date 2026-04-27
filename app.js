@@ -157,6 +157,13 @@ els.toeicThresholdNumber.step = 1;
 els.mockToeicThreshold.step = 1;
 els.mockToeicThresholdNumber.step = 1;
 
+document.querySelector('label[for="toeicThreshold"]')?.replaceChildren("어학성적 기준");
+document.querySelector('label[for="toeicThreshold"]')
+  ?.closest(".threshold-row")
+  ?.querySelector(".microcopy")
+  ?.replaceChildren("토익성적 파일은 토익만 분석하고, 토익+모의성적 파일은 토익 또는 모의토익 중 하나만 있어도 포함해 분석합니다.");
+els.mockToeicThreshold?.closest(".threshold-row")?.setAttribute("hidden", "hidden");
+
 function syncPair(range, number, afterChange) {
   range.addEventListener("input", () => {
     number.value = range.value;
@@ -540,7 +547,7 @@ function updateThresholdBounds(rows, clampCurrent = true) {
   if (!rows.length) return;
 
   const gpaValues = rows.map((row) => row.gpa);
-  const toeicValues = rows.map((row) => row.toeic).filter((v) => Number.isFinite(v));
+  const toeicValues = rows.map((row) => row.languageScore).filter((v) => Number.isFinite(v));
   const mockToeicValues = rows.map((row) => row.mockToeic).filter((v) => Number.isFinite(v));
   const minGpa = Number(Math.min(...gpaValues).toFixed(2));
   const maxGpa = Number(Math.max(...gpaValues).toFixed(2));
@@ -606,8 +613,6 @@ function render() {
 
   const gpaThreshold = Number(els.gpaThreshold.value);
   const toeicThreshold = Number(els.toeicThreshold.value);
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const mockAvailable = hasMockToeicData();
   const total = state.rows.length;
   if (!total) {
     renderEmptyState();
@@ -621,12 +626,12 @@ function render() {
 
   state.rows.forEach((row) => {
     const gpaPass = row.gpa >= gpaThreshold;
-    const toeicPass = passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable);
+    const toeicPass = passesLanguageCriterion(row, toeicThreshold);
     if (gpaPass) gpaPassCount += 1;
     if (toeicPass) toeicPassCount += 1;
     if (gpaPass && toeicPass) bothPassCount += 1;
     gpaValues.push(row.gpa);
-    if (Number.isFinite(row.toeic)) toeicScores.push(row.toeic);
+    if (Number.isFinite(row.languageScore)) toeicScores.push(row.languageScore);
   });
 
   renderSummaryChips(total);
@@ -674,7 +679,12 @@ function getAnalysisRows() {
       ...row,
       toeic: period === "recent" ? row.toeicA : row.toeicB,
       mockToeic: period === "recent" ? row.mockToeicA : row.mockToeicB,
+      languageScore: Number.NaN,
       // toeic이 NaN인 학생 = 미응시, 모집단에 포함하되 충족 기준 미달 처리됨
+    }))
+    .map((row) => ({
+      ...row,
+      languageScore: preferredLanguageScore(row),
     }));
 
   const grouped = new Map();
@@ -682,8 +692,8 @@ function getAnalysisRows() {
     const previous = grouped.get(row.studentId);
     const rowHasLanguageScore = Number.isFinite(row.toeic) || Number.isFinite(row.mockToeic);
     const previousHasLanguageScore = previous && (Number.isFinite(previous.toeic) || Number.isFinite(previous.mockToeic));
-    const rowBestLanguageScore = bestLanguageScore(row);
-    const previousBestLanguageScore = previous ? bestLanguageScore(previous) : -Infinity;
+    const rowBestLanguageScore = preferredLanguageScoreForCompare(row);
+    const previousBestLanguageScore = previous ? preferredLanguageScoreForCompare(previous) : -Infinity;
     if (
       !previous ||
       (rowHasLanguageScore && !previousHasLanguageScore) ||
@@ -704,15 +714,20 @@ function hasMockToeicData() {
   return state.rows.some((row) => Number.isFinite(row.mockToeic));
 }
 
-function passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable = hasMockToeicData()) {
-  return row.toeic >= toeicThreshold || (mockAvailable && row.mockToeic >= mockToeicThreshold);
+function passesLanguageCriterion(row, toeicThreshold) {
+  return Number.isFinite(row.languageScore) && row.languageScore >= toeicThreshold;
 }
 
-function bestLanguageScore(row) {
-  return Math.max(
+function preferredLanguageScore(row) {
+  const score = Math.max(
     Number.isFinite(row.toeic) ? row.toeic : -Infinity,
     Number.isFinite(row.mockToeic) ? row.mockToeic : -Infinity,
   );
+  return Number.isFinite(score) ? score : Number.NaN;
+}
+
+function preferredLanguageScoreForCompare(row) {
+  return Number.isFinite(row.languageScore) ? row.languageScore : -Infinity;
 }
 
 function getSelectedSemesters() {
@@ -723,29 +738,24 @@ function getSelectedSemesters() {
   );
 }
 
-function createLanguageSweep(rows, mockToeicThreshold) {
+function createLanguageSweep(rows) {
   const sortedRows = [...rows].sort((a, b) => b.gpa - a.gpa);
   const maxToeicScore = Math.max(
     990,
     ...rows.map((row) => (
-      Number.isFinite(row.toeic)
-        ? Math.ceil(row.toeic)
+      Number.isFinite(row.languageScore)
+        ? Math.ceil(row.languageScore)
         : 0
     )),
   );
   const toeicFreq = new Uint32Array(maxToeicScore + 2);
   const suffixCounts = new Uint32Array(maxToeicScore + 2);
   let cursor = 0;
-  let autoPassCount = 0;
   let suffixDirty = true;
 
   function markRow(row) {
-    if (Number.isFinite(row.mockToeic) && row.mockToeic >= mockToeicThreshold) {
-      autoPassCount += 1;
-      return;
-    }
-    if (!Number.isFinite(row.toeic)) return;
-    const score = clamp(Math.ceil(row.toeic), 0, maxToeicScore);
+    if (!Number.isFinite(row.languageScore)) return;
+    const score = clamp(Math.ceil(row.languageScore), 0, maxToeicScore);
     toeicFreq[score] += 1;
     suffixDirty = true;
   }
@@ -770,7 +780,7 @@ function createLanguageSweep(rows, mockToeicThreshold) {
     countAtToeic(threshold) {
       ensureSuffixCounts();
       const score = clamp(Math.ceil(threshold), 0, maxToeicScore + 1);
-      return autoPassCount + (score > maxToeicScore ? 0 : suffixCounts[score]);
+      return score > maxToeicScore ? 0 : suffixCounts[score];
     },
   };
 }
@@ -852,7 +862,7 @@ function renderHeatmap(gpaThreshold, toeicThreshold) {
 
   state.rows.forEach((row) => {
     const x = findBin(row.gpa, gpaBins);
-    const y = findBin(row.toeic, toeicBins);
+    const y = findBin(row.languageScore, toeicBins);
     if (x >= 0 && y >= 0) counts[y][x] += 1;
   });
 
@@ -927,11 +937,11 @@ function renderScatter(gpaThreshold, toeicThreshold) {
 
   state.rows.forEach((row, index) => {
     if (index % sampleStep !== 0) return;
-    if (!Number.isFinite(row.toeic)) return; // 미응시 제외
-    const eligible = row.gpa >= gpaThreshold && row.toeic >= toeicThreshold;
+    if (!Number.isFinite(row.languageScore)) return; // 미응시 제외
+    const eligible = row.gpa >= gpaThreshold && row.languageScore >= toeicThreshold;
     ctx.fillStyle = eligible ? "rgba(16, 185, 129, 0.72)" : "rgba(244, 63, 94, 0.22)";
     ctx.beginPath();
-    ctx.arc(toX(row.gpa), toY(row.toeic), eligible ? 2.4 : 1.8, 0, Math.PI * 2);
+    ctx.arc(toX(row.gpa), toY(row.languageScore), eligible ? 2.4 : 1.8, 0, Math.PI * 2);
     ctx.fill();
   });
 
@@ -1017,9 +1027,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   const gMax = state.scoreBounds.maxGpa;
   const tMin = state.scoreBounds.minToeic;
   const tMax = state.scoreBounds.maxToeic;
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const mockAvailable = hasMockToeicData();
-  const finiteToeicRows = state.rows.filter((row) => Number.isFinite(row.toeic));
+  const finiteToeicRows = state.rows.filter((row) => Number.isFinite(row.languageScore));
 
   if (!finiteToeicRows.length) {
     renderBlankCanvas(canvas, "선택한 토익 기간의 성적이 없습니다.");
@@ -1042,7 +1050,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   // Precompute rate grid with a cumulative GPA sweep so large datasets remain interactive.
   const grid = [];
   let gridMax = 0;
-  const sweep = createLanguageSweep(state.rows, mockToeicThreshold);
+  const sweep = createLanguageSweep(state.rows);
   for (let gi = nG - 1; gi >= 0; gi -= 1) {
     const g = gThresholds[gi];
     sweep.advanceToGpa(g);
@@ -1119,7 +1127,7 @@ function renderSensitivity(gpaThreshold, toeicThreshold) {
   ctx.fillStyle = "#10b981"; ctx.fill();
 
   // Current rate bubble
-  const currentCount = state.rows.filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable)).length;
+  const currentCount = state.rows.filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold)).length;
   const curRate = currentCount / total;
   const bubbleText = `${percentFormat.format(curRate * 100)}%`;
   ctx.font = "800 16px sans-serif";
@@ -1302,10 +1310,6 @@ function adjustComplementaryThreshold(changedCriterion) {
   updateThresholdBounds(state.rows);
 
   const target = Number(els.targetRate.value) / 100;
-  if (changedCriterion === "mockToeic") {
-    applyTargetRateThresholds(true);
-    return;
-  }
   const candidate =
     changedCriterion === "toeic"
       ? findBestGpaForFixedToeic(Number(els.toeicThreshold.value), target)
@@ -1378,8 +1382,7 @@ function updateRecommendationCards(candidates, text) {
 }
 
 function findBestGpaForFixedToeic(toeic, target) {
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const sweep = createLanguageSweep(state.rows, mockToeicThreshold);
+  const sweep = createLanguageSweep(state.rows);
   let best = null;
 
   for (let gpa = state.scoreBounds.maxGpa; gpa >= state.scoreBounds.minGpa - 0.001; gpa -= 0.01) {
@@ -1405,8 +1408,7 @@ function findBestGpaForFixedToeic(toeic, target) {
 }
 
 function findBestToeicForFixedGpa(gpa, target) {
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const sweep = createLanguageSweep(state.rows, mockToeicThreshold);
+  const sweep = createLanguageSweep(state.rows);
   sweep.advanceToGpa(gpa);
   let best = null;
 
@@ -1434,12 +1436,11 @@ function findTargetCandidates(target) {
   const candidates = [];
   const gpaValuesSorted = [...state.rows.map((row) => row.gpa)].sort((a, b) => a - b);
   const toeicValuesSorted = state.rows
-    .map((row) => row.toeic)
+    .map((row) => row.languageScore)
     .filter((value) => Number.isFinite(value))
     .sort((a, b) => a - b);
   if (!toeicValuesSorted.length) return candidates;
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const sweep = createLanguageSweep(state.rows, mockToeicThreshold);
+  const sweep = createLanguageSweep(state.rows);
 
   for (let gpa = state.scoreBounds.maxGpa; gpa >= state.scoreBounds.minGpa - 0.001; gpa -= 0.05) {
     const roundedGpa = Number(gpa.toFixed(2));
@@ -1470,10 +1471,8 @@ function exportEligibleCsv() {
   state.rows = getAnalysisRows();
   const gpaThreshold = Number(els.gpaThreshold.value);
   const toeicThreshold = Number(els.toeicThreshold.value);
-  const mockToeicThreshold = Number(els.mockToeicThreshold.value);
-  const mockAvailable = hasMockToeicData();
   const eligible = state.rows
-    .filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold, mockToeicThreshold, mockAvailable))
+    .filter((row) => row.gpa >= gpaThreshold && passesLanguageCriterion(row, toeicThreshold))
     .map((row) => ({
       ...row.raw,
       분석_학생ID: row.studentId,
@@ -1489,7 +1488,7 @@ function exportEligibleCsv() {
       분석_적용모의토익: Number.isFinite(row.mockToeic) ? row.mockToeic : "",
       분석_어학충족구분: row.toeic >= toeicThreshold
         ? "토익"
-        : mockAvailable && row.mockToeic >= mockToeicThreshold
+        : row.mockToeic >= toeicThreshold
           ? "모의토익"
           : "",
       분석_토익기간: document.querySelector('input[name="toeicPeriod"]:checked')?.value === "recent" ? "최근 2년(A)" : "전체 기간(B)",
@@ -1506,7 +1505,7 @@ function exportEligibleCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `eligible_gpa_${gpaThreshold}_toeic_${toeicThreshold}_mock_${mockToeicThreshold}.csv`;
+  link.download = `eligible_gpa_${gpaThreshold}_language_${toeicThreshold}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

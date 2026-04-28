@@ -100,9 +100,9 @@ const percentFormat = new Intl.NumberFormat("ko-KR", {
 });
 let targetRateTimer = null;
 const DEFAULT_DATASET = {
-  url: "./data/2026_1_students.xlsx",
+  url: "./data/2026-1 A.xlsx",
   displayName: "2026학년도 1학기",
-  sourceName: "2026_1_students.xlsx",
+  sourceName: "2026-1 A.xlsx",
 };
 
 const gpaBins = [
@@ -144,6 +144,7 @@ els.loadCombinedPreset?.addEventListener("click", () => {
 els.applyMapping.addEventListener("click", applyMapping);
 els.recommendButton.addEventListener("click", applyCurrentTarget);
 els.exportButton.addEventListener("click", exportEligibleCsv);
+resetPresetButtons();
 els.collegeFilter.addEventListener("change", () => {
   updateDepartmentFilterOptions();
   handleAnalysisContextChange();
@@ -170,6 +171,28 @@ document.querySelector('label[for="toeicThreshold"]')
   ?.querySelector(".microcopy")
   ?.replaceChildren("토익성적 파일은 토익만 분석하고, 토익+모의성적 파일은 토익 또는 모의토익 중 하나만 있어도 포함해 분석합니다.");
 els.mockToeicThreshold?.closest(".threshold-row")?.setAttribute("hidden", "hidden");
+
+function resetPresetButtons() {
+  const toeicButton = els.loadToeicPreset?.cloneNode(true);
+  if (toeicButton && els.loadToeicPreset?.parentNode) {
+    toeicButton.textContent = "data/2026-1 A.xlsx: 토익점수";
+    els.loadToeicPreset.replaceWith(toeicButton);
+    els.loadToeicPreset = toeicButton;
+    els.loadToeicPreset.addEventListener("click", () => {
+      loadPresetDataset("./data/2026-1 A.xlsx", "data/2026-1 A.xlsx: 토익점수", "2026-1 A.xlsx");
+    });
+  }
+
+  const combinedButton = els.loadCombinedPreset?.cloneNode(true);
+  if (combinedButton && els.loadCombinedPreset?.parentNode) {
+    combinedButton.textContent = "data/2026-1 B.xlsx: 토익+모의점수";
+    els.loadCombinedPreset.replaceWith(combinedButton);
+    els.loadCombinedPreset = combinedButton;
+    els.loadCombinedPreset.addEventListener("click", () => {
+      loadPresetDataset("./data/2026-1 B.xlsx", "data/2026-1 B.xlsx: 토익+모의점수", "2026-1 B.xlsx");
+    });
+  }
+}
 
 function syncPair(range, number, afterChange) {
   range.addEventListener("input", () => {
